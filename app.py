@@ -142,7 +142,7 @@ def handle_message(event):
                 user_status[user_id] = {"mode": "select_diary_type"}
                 line_bot_api.reply_message(
                     event.reply_token,
-                TextSendMessage("追加する日記の種類を番号で教えてね\n1.出勤\n2.退勤\n3.お礼")
+                    TextSendMessage("追加する日記の種類を番号で教えてね\n1.出勤\n2.退勤\n3.お礼")
                 )
             else:
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("⚠️ この機能はプレミアムユーザー限定です。"))
@@ -154,8 +154,7 @@ def handle_message(event):
                 user_status[user_id] = {"mode": "diary_add", "diary_type": diary_type}
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(f"✏️ {diary_type}日記モードになりました。
-空行で区切って複数の日記を送ってね♪")
+                    TextSendMessage(f"✏️ {diary_type}日記モードになりました。\n空行で区切って複数の日記を送ってね♪")
                 )
             else:
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("番号は 1〜3 の中から選んでね♪"))
@@ -163,9 +162,7 @@ def handle_message(event):
 
         if user_status.get(user_id, {}).get("mode") == "diary_add":
             diary_type = user_status[user_id]["diary_type"]
-            entries = [e.strip() for e in message_text.split("
-
-") if e.strip()]
+            entries = [e.strip() for e in message_text.split("\n\n") if e.strip()]
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             sheet = connect_sheet("DiaryUserData", "PremiumDiarySamples")
             for entry in entries:
@@ -200,10 +197,7 @@ def handle_message(event):
             log_usage(user_id)
             generated_diary = generate_simple_diary(user_info, diary_type, keyword_text)
             latest_diaries[user_id] = {"type": diary_type, "text": generated_diary}
-            reply_text = f"📝 生成された日記：
-{generated_diary}
-
-気に入ったら「👍」微妙なら「👎」で教えてね♪"
+            reply_text = f"📝 生成された日記：\n{generated_diary}\n\n気に入ったら「👍」微妙なら「👎」で教えてね♪"
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
             return
 
@@ -220,10 +214,8 @@ def handle_message(event):
         usage_count = get_usage_count(user_id)
         if usage_count >= 3 and not is_test_user(user_id):
             reply_text = (
-                "⚠️ 本日の無料分はこれでラストだよっ💦
-"
-                "明日また会えるの楽しみにしてるねっ💕
-"
+                "⚠️ 本日の無料分はこれでラストだよっ💦\n"
+                "明日また会えるの楽しみにしてるねっ💕\n"
                 "▶️ プレミアム登録すれば制限なしで使えるよ！"
             )
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
@@ -232,10 +224,7 @@ def handle_message(event):
         log_usage(user_id)
         generated_diary = generate_simple_diary(user_info, diary_type)
         latest_diaries[user_id] = {"type": diary_type, "text": generated_diary}
-        reply_text = f"📝 生成された日記：
-{generated_diary}
-
-気に入ったら「👍」微妙なら「👎」で教えてね♪"
+        reply_text = f"📝 生成された日記：\n{generated_diary}\n\n気に入ったら「👍」微妙なら「👎」で教えてね♪"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
     except Exception:
@@ -250,10 +239,8 @@ def notify_newly_approved_users():
                 user_id = row.get("user_id")
                 if user_id:
                     message = (
-                        "✅ プレミアム登録が承認されました！
-"
-                        "いつでもプレミアム設定が反映された写メ日記を作れるよ✨
-"
+                        "✅ プレミアム登録が承認されました！\n"
+                        "いつでもプレミアム設定が反映された写メ日記を作れるよ✨\n"
                         "「出勤」「退勤」「お礼」って送ってね😊"
                     )
                     line_bot_api.push_message(user_id, TextSendMessage(text=message))
