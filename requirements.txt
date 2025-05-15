@@ -1,0 +1,6 @@
+Flask
+openai
+python-dotenv
+gspread
+oauth2client
+line-bot-sdk
