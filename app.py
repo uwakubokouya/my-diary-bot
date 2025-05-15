@@ -154,7 +154,7 @@ def handle_message(event):
                 user_status[user_id] = {"mode": "diary_add", "diary_type": diary_type}
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage(f"✏️ {diary_type}日記モードになりました。\n空行で区切って複数の日記を送ってね♪")
+                    TextSendMessage(text=f"✏️ {diary_type}空行で区切って複数の日記を送ってね♪")
                 )
             else:
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("番号は 1〜3 の中から選んでね♪"))
