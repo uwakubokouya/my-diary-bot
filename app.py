@@ -250,4 +250,5 @@ def notify_newly_approved_users():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
+    threading.Thread(target=notify_newly_approved_users, daemon=True).start()
     app.run(host="0.0.0.0", port=port)
