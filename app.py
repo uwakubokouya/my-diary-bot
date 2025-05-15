@@ -142,10 +142,7 @@ def handle_message(event):
                 user_status[user_id] = {"mode": "select_diary_type"}
                 line_bot_api.reply_message(
                     event.reply_token,
-                    TextSendMessage("追加する日記の種類を番号で教えてね
-1.出勤
-2.退勤
-3.お礼")
+                TextSendMessage("追加する日記の種類を番号で教えてね\n1.出勤\n2.退勤\n3.お礼")
                 )
             else:
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("⚠️ この機能はプレミアムユーザー限定です。"))
