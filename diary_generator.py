@@ -1,9 +1,14 @@
-import openai
 import random
+from openai import OpenAI
+import os
+
 from premium_setting import load_premium_settings
 from premium_utils import get_user_diary_samples, increment_diary_usage
 from tone_utils import adjust_tone_style, get_topic_by_tone
 from google_sheets import get_positive_feedback, connect_sheet, increment_template_usage
+
+# ✅ OpenAI クライアントの初期化（v1以降必須）
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY").strip())
 
 # ✅ テンプレートキャッシュ
 template_cache = {}
@@ -24,23 +29,22 @@ DIARY_PURPOSES = {
 
 # ✅ 無料ユーザー用プロンプト
 FREE_PROMPTS = {
-     "shukkin": (
+    "shukkin": (
         "あなたは人気風俗キャストです。本日出勤していることを自然な流れで伝えつつ、"
         "空き枠案内・得意サービス・明るい雰囲気を織り交ぜ、親近感ある文章で日記を作成してください。\n\n"
     ),
     "taikin": "あなたは人気風俗キャストです。本日の退勤を優しく自然に伝え、感謝、満了アピール、次回予定、プライベート感をバランスよく盛り込んだ日記を作成してください。",
-   "orei": (
-    "あなたは人気風俗キャストです。今日来てくれた“特定のお客様”に向けた自然なお礼日記を作成してください。\n\n"
-    "・呼びかけは「○○さん」や「○○さま」など個人向けにしてください。\n"
-    "・お客様と交わした会話、反応、印象に残った出来事をできるだけ具体的に書いてください。\n"
-    "・気持ちよさそうなリアクションや甘えた姿にキュンとしたなど、あなた自身の感情も自然に込めてください。\n"
-    "・ぬるぬる、くっつき、マッサージなどの体験に関する描写を含めてもOKです。\n"
-    "・自然で柔らかい文体、絵文字も適度に使って構いません。\n"
-    "・文章の冒頭は『今日は〜』ではなく、その方とのやりとりにすっと入れるようにしてください。\n"
-)
+    "orei": (
+        "あなたは人気風俗キャストです。今日来てくれた“特定のお客様”に向けた自然なお礼日記を作成してください。\n\n"
+        "・呼びかけは「○○さん」や「○○さま」など個人向けにしてください。\n"
+        "・お客様と交わした会話、反応、印象に残った出来事をできるだけ具体的に書いてください。\n"
+        "・気持ちよさそうなリアクションや甘えた姿にキュンとしたなど、あなた自身の感情も自然に込めてください。\n"
+        "・ぬるぬる、くっつき、マッサージなどの体験に関する描写を含めてもOKです。\n"
+        "・自然で柔らかい文体、絵文字も適度に使って構いません。\n"
+        "・文章の冒頭は『今日は〜』ではなく、その方とのやりとりにすっと入れるようにしてください。\n"
+    )
 }
 
-# ✅ テンプレート取得（キャッシュ付き）
 def get_templates_with_cache(tab_name):
     if tab_name not in template_cache:
         sheet = connect_sheet("DiaryTemplates", tab_name)
@@ -56,15 +60,12 @@ def get_templates_with_cache(tab_name):
         template_cache[tab_name] = templates
     return template_cache[tab_name]
 
-# ✅ ○○さん → お客様 に変換する補助関数
 def sanitize_diary_text(text, username):
     return text.replace(f"{username}さん", "お客様").replace(f"{username}様", "お客様")
 
-# ✅ 無料ユーザー用日記生成
 def generate_free_diary(user_info, diary_type, reference_examples=""):
     prompt = f"""
 {FREE_PROMPTS.get(diary_type, "あなたは風俗キャストです。自然な写メ日記を書いてください。")}
-
 
 🎀 キャラ情報
 ・源氏名：{user_info['name']}
@@ -77,7 +78,7 @@ def generate_free_diary(user_info, diary_type, reference_examples=""):
 📝 1通だけ自然な日記を書いてください。
 日記の出だしは毎回違う自然な入り方にしてください。「今日も〇〇です」のような出だしは避けてください。
 """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
         messages=[
             {"role": "system", "content": "あなたは自然な雰囲気で日記を書く風俗キャストです。"},
@@ -85,9 +86,8 @@ def generate_free_diary(user_info, diary_type, reference_examples=""):
         ],
         temperature=0.85
     )
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
 
-# ✅ プレミアムユーザー用日記生成
 def generate_premium_diary(user_info, diary_type, diary_samples, premium, keyword_text=None):
     diary_goal = DIARY_PURPOSES.get(diary_type, "自然な写メ日記を書く")
     premium_text = f"""
@@ -121,7 +121,7 @@ def generate_premium_diary(user_info, diary_type, diary_samples, premium, keywor
 
 📝 これらを踏まえた自然な1通の日記を作成してください。
 """
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo-0125",
         messages=[
             {"role": "system", "content": "あなたは自然な雰囲気で日記を書くプロフェッショナルな風俗キャストです。"},
@@ -129,9 +129,8 @@ def generate_premium_diary(user_info, diary_type, diary_samples, premium, keywor
         ],
         temperature=0.85
     )
-    return response.choices[0].message["content"].strip()
+    return response.choices[0].message.content.strip()
 
-# ✅ 日記生成メイン関数（全ユーザー対応）
 def generate_simple_diary(user_info, diary_type, keyword_text=None):
     user_id = user_info["user_id"]
     is_premium = user_info.get("is_premium", False)
@@ -153,7 +152,6 @@ def generate_simple_diary(user_info, diary_type, keyword_text=None):
             other_requests=premium.get("other_requests", "")
         )
 
-    # --- 無料ユーザー処理 ---
     reference_examples = ""
     feedbacks = get_positive_feedback(user_id, diary_type)
 
@@ -176,7 +174,7 @@ def generate_simple_diary(user_info, diary_type, keyword_text=None):
         combined = selected_templates + selected_feedbacks
         random.shuffle(combined)
         reference_examples = "\n".join(combined)
-    
+
     else:
         if len(feedbacks) >= 10:
             reference_examples = "\n".join(feedbacks[:5])
@@ -194,7 +192,6 @@ def generate_simple_diary(user_info, diary_type, keyword_text=None):
                     increment_template_usage(sheet, section, selected, records)
 
             reference_examples = "\n".join(selected_texts)
-
 
     generated_text = generate_free_diary(user_info, diary_type, reference_examples)
     return adjust_tone_style(generated_text, user_info["tone"], user_info["name"])
