@@ -1,6 +1,11 @@
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from datetime import datetime
+
+SCOPES = [
+    'https://www.googleapis.com/auth/spreadsheets',
+    'https://www.googleapis.com/auth/drive'
+]
 
 # 🔧 汎用：指定スプレッドシート・タブへ接続
 def connect_sheet(spreadsheet_name, worksheet_name):
