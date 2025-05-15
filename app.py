@@ -187,9 +187,6 @@ def handle_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage("ユーザー情報が見つかりません。『情報を登録する』と送ってね♪"))
             return
 
-        user_info["user_id"] = user_id
-        user_info["is_premium"] = user_id in approved_users
-
         if user_id in pending_keyword_request:
             diary_type = pending_keyword_request.pop(user_id)
             keyword_text = message_text if user_id in approved_users else None
