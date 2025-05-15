@@ -225,6 +225,19 @@ def get_user_info(user_id):
                 "is_premium": row.get("ステータス", "") == "承認済"
             }
     return None
+    
+# ✅ LINEユーザーIDから基本情報を取得（name, age_range, tone のみ）
+def get_user_info_from_sheet(user_id):
+    sheet = connect_sheet("DiaryUserData", "UserInfoLog")
+    records = sheet.get_all_records()
+    for row in records:
+        if str(row.get("user_id", "")).strip() == str(user_id):
+            return {
+                "name": row.get("源氏名", ""),
+                "age_range": row.get("年代", ""),
+                "tone": row.get("口調", "")
+            }
+    return {}
 
 def update_premium_status(user_id, status):
     sheet = connect_sheet("DiaryUserData", "UserInfoLog")
