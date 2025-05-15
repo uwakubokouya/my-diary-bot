@@ -5,7 +5,7 @@ from datetime import datetime
 # 🔧 汎用：指定スプレッドシート・タブへ接続
 def connect_sheet(spreadsheet_name, worksheet_name):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name("service_account.json", scope)
+    creds = Credentials.from_service_account_file('/etc/secrets/credentials.json', scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open(spreadsheet_name).worksheet(worksheet_name)
 

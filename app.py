@@ -295,5 +295,5 @@ def notify_newly_approved_users():
         time.sleep(60)
 
 if __name__ == "__main__":
-    threading.Thread(target=notify_newly_approved_users, daemon=True).start()
-    app.run(debug=False)
+    port = int(os.environ.get("PORT", 5000))  # Renderでは環境変数 PORT が使われる
+    app.run(host="0.0.0.0", port=port)
