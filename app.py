@@ -10,27 +10,19 @@ import base64
 import time
 import logging
 
-# 🔧 既存ログハンドラを削除（他ライブラリが設定済みの可能性に対応）
+# 🔧 既存ログハンドラを削除
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-# ✅ ログをファイルにも保存（+ コンソール出力も維持する場合は後述）
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    filename="app.log",       # ← このファイルに出力される
+    filename="app.log",
     encoding="utf-8"
 )
 
-# ✅ 特定ログの出力を静かにする（詳細ログ抑制）
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-logging.getLogger("urllib3.util.retry").setLevel(logging.WARNING)
-logging.getLogger("googleapiclient.discovery").setLevel(logging.WARNING)
-logging.getLogger("google.auth.transport.requests").setLevel(logging.WARNING)
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
-
-
 
 from flask import Flask, request, abort
 from dotenv import load_dotenv
@@ -42,18 +34,16 @@ from tone_utils import get_welcome_message
 from google_sheets import (
     is_test_user, append_user_to_sheet, append_user_diary_entry,
     get_usage_count, log_usage, get_approved_users, log_feedback,
-    get_newly_approved_users, mark_premium_notified, append_diary_sample_to_sheet
+    get_newly_approved_users, mark_premium_notified, append_diary_sample_to_sheet,
+    connect_sheet, get_user_info
 )
 from premium_setting import (
     start_premium_setting, is_in_premium_setting, handle_premium_step,
     load_premium_settings, save_diary_samples, get_current_step, update_user_state,
-    premium_state   # ←これ追加！！
+    premium_state
 )
 from user_register import handle_registration_step, is_registering
 from diary_generator import generate_simple_diary
-from google_sheets import connect_sheet
-
-# ====== 初期設定 ======
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
@@ -64,32 +54,21 @@ handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET").strip())
 
 app = Flask(__name__)
 
-# ====== データ管理用 ======
-
 latest_diaries = {}
 pending_keyword_request = {}
 temporary_keywords = {}
 adding_diary_users = set()
-user_status = {} 
+user_status = {}
 
 os.makedirs("diary_data/sample", exist_ok=True)
 os.makedirs("feedback/good", exist_ok=True)
 os.makedirs("feedback/bad", exist_ok=True)
-
-# ====== 定数 ======
 
 DIARY_TYPE_MAP = {
     "1": "shukkin",
     "2": "taikin",
     "3": "orei"
 }
-
-# ====== 関数定義 ======
-
-def get_user_info(user_id):
-    with open("users_info.json", "r", encoding="utf-8") as f:
-        users = json.load(f)
-    return users.get(user_id)
 
 def get_diary_type(text):
     if "出勤" in text:
@@ -100,18 +79,6 @@ def get_diary_type(text):
         return "orei"
     else:
         return "diary"
-
-def classify_diary_type(text):
-    text = text.lower()
-    if any(keyword in text for keyword in ["出勤", "おはよう", "今日も出勤", "こんにちは"]):
-        return "shukkin"
-    if any(keyword in text for keyword in ["退勤", "お疲れ様", "また明日", "おやすみ"]):
-        return "taikin"
-    if any(keyword in text for keyword in ["ありがとう", "感謝", "お礼", "嬉しい", "また会いたい"]):
-        return "orei"
-    return "diary"
-
-# ====== Webhookエンドポイント ======
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -134,8 +101,6 @@ def callback():
         abort(400)
     return "OK"
 
-# ====== イベントハンドラ ======
-
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id
@@ -148,13 +113,11 @@ def handle_message(event):
         user_id = event.source.user_id
         message_text = event.message.text.strip()
 
-        # ✅ プレミアム登録スタート
         if message_text == "プレミアム登録":
             reply = start_premium_setting(user_id)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             return
 
-        # ✅ 日記追加フロー（ステップ1：開始）
         if message_text == "日記追加":
             if user_id in get_approved_users():
                 user_status[user_id] = {"mode": "select_diary_type"}
@@ -166,7 +129,6 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("⚠️ この機能はプレミアムユーザー限定です。"))
             return
 
-        # ✅ ステップ2：日記タイプ選択
         if user_status.get(user_id, {}).get("mode") == "select_diary_type":
             diary_type = DIARY_TYPE_MAP.get(message_text)
             if diary_type:
@@ -179,7 +141,6 @@ def handle_message(event):
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("番号は 1〜3 の中から選んでね♪"))
             return
 
-        # ✅ ステップ3：実際の入力を受けてシートに保存
         if user_status.get(user_id, {}).get("mode") == "diary_add":
             diary_type = user_status[user_id]["diary_type"]
             entries = [e.strip() for e in message_text.split("\n\n") if e.strip()]
@@ -187,11 +148,9 @@ def handle_message(event):
             sheet = connect_sheet("DiaryUserData", "PremiumDiarySamples")
             for entry in entries:
                 sheet.append_row([user_id, diary_type, now, entry])
-            user_status[user_id] = {}  # 状態リセット
+            user_status[user_id] = {}
             line_bot_api.reply_message(event.reply_token, TextSendMessage(f"✅ {len(entries)}件の日記を追加しました！ありがとう♪"))
             return
-
-        # ===== 通常メッセージ処理 =====
 
         if message_text in ["👍", "👎"] and user_id in latest_diaries:
             feedback_type = "good" if message_text == "👍" else "bad"
@@ -217,7 +176,7 @@ def handle_message(event):
 
         if message_text == "情報を登録する":
             if user_id in premium_state:
-                del premium_state[user_id]  # ←これ追加！！
+                del premium_state[user_id]
             reply = handle_registration_step(user_id, None)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             return
@@ -270,11 +229,9 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
     except Exception:
-        print("❌ エラー発生:")
         traceback.print_exc()
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 内部エラーが発生しました。"))
 
-# ====== プレミアム承認通知 ======
 
 def notify_newly_approved_users():
     while True:
@@ -295,5 +252,5 @@ def notify_newly_approved_users():
         time.sleep(60)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Renderでは環境変数 PORT が使われる
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
