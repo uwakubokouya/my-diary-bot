@@ -46,9 +46,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive'
 ]
 
-# ✅ 環境変数から読み込み（Renderではこれが推奨）
-service_account_info = json.loads(os.environ["GOOGLE_APPLICATION_CREDENTIALS_JSON"])
-creds = Credentials.from_service_account_info(service_account_info, scopes=SCOPES)
+# ✅ Secret File（Renderの/etc/secrets/credentials.json）から読み込む
+creds = Credentials.from_service_account_file('/etc/secrets/credentials.json', scopes=SCOPES)
 client = gspread.authorize(creds)
 
 # ✅ シート設定
