@@ -1,0 +1,20 @@
+# 機密情報
+.env
+*.json
+*.key
+
+# Pythonキャッシュ系
+__pycache__/
+*.pyc
+
+# 実行ファイル・バイナリ
+*.exe
+
+# VSCode 設定
+.vscode/
+
+# テスト・ログ
+*.log
+*.sqlite3
+test_cache_check.py
+test_generate_diary.py
