@@ -225,6 +225,25 @@ def get_user_info(user_id):
                 "is_premium": row.get("ステータス", "") == "承認済"
             }
     return None
+
+# ✅ 追加：PremiumUserInfo タブからプレミアム情報を取得する関数
+def get_premium_user_info(user_id):
+    sheet = connect_sheet("DiaryUserData", "PremiumUserInfo")
+    records = sheet.get_all_records()
+
+    for row in records:
+        if str(row.get("user_id", "")).strip() == str(user_id).strip():
+            return {
+                "emoji_list": row.get("emoji_list", ""),
+                "tone_tags": row.get("tone_tags", ""),
+                "ng_elements": row.get("ng_elements", ""),
+                "appeal_tags": row.get("appeal_tags", ""),
+                "appeal_elements": row.get("appeal_elements", ""),
+                "weekly_schedule": row.get("weekly_schedule", ""),
+                "fav_words": row.get("fav_words", ""),
+                "other_requests": row.get("other_requests", "")
+            }
+    return None
     
 # ✅ LINEユーザーIDから基本情報を取得（name, age_range, tone のみ）
 def get_user_info_from_sheet(user_id):

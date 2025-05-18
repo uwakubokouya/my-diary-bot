@@ -5,6 +5,8 @@ from google_sheets import (
     connect_sheet,
     complete_premium_registration,
     append_diary_sample_to_sheet,
+    save_premium_user_info_to_sheet,  # ✅ 追加
+    get_user_info_from_sheet
 )
 
 # ✅ プレミアム設定保存ファイル
@@ -58,7 +60,6 @@ def start_premium_setting(user_id):
     }
     return """🎉【プレミアム設定スタート】🎉
 
-
 これから、あなた専用の日記をもっと魅力的に仕上げるための
 「プレミアム設定」の質問を順番にお送りします😊
 
@@ -88,9 +89,10 @@ def handle_premium_step(user_id, message):
             return premium_questions[step]["question"]
         else:
             # ✅ 最終保存処理
-            save_diary_samples(user_id, state["data"]["diary_samples"])
+            save_diary_samples(user_id, state["data"].get("diary_samples", ""))
             save_premium_settings(user_id, state["data"])
-            from google_sheets import get_user_info_from_sheet
+            save_premium_user_info_to_sheet(user_id, state["data"])  # ✅ ここでスプレッドに保存
+
             user_info = get_user_info_from_sheet(user_id)
             nickname = user_info.get("name", "未設定")
             store = state["data"].get("store_name", "未設定")
