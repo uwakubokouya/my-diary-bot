@@ -9,19 +9,7 @@ import hashlib
 import base64
 import time
 import logging
-
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    filename="app.log",
-    encoding="utf-8"
-)
-
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-logging.getLogger("werkzeug").setLevel(logging.WARNING)
+import sys
 
 from flask import Flask, request, abort
 from dotenv import load_dotenv
@@ -44,6 +32,29 @@ from premium_setting import (
 from user_register import handle_registration_step, is_registering
 from diary_generator import generate_simple_diary
 
+# ログ設定
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+# ログフォーマット
+log_format = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+
+# ファイルログ設定（app.log）
+file_handler = logging.FileHandler("app.log", encoding="utf-8")
+file_handler.setFormatter(log_format)
+
+# 標準出力ログ設定（Renderのログタブにも出る）
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(log_format)
+
+# ルートロガー設定
+logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler])
+
+# 外部モジュールのログレベル調整
+logging.getLogger("urllib3").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+
+# 環境変数読み込み
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path, override=True)
 
@@ -53,6 +64,7 @@ handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET").strip())
 
 app = Flask(__name__)
 
+# 各種ステート
 latest_diaries = {}
 pending_keyword_request = {}
 temporary_keywords = {}
@@ -103,6 +115,7 @@ def callback():
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id
+    logging.info(f"[フォロー] user_id={user_id}")
     welcome_text = get_welcome_message()
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_text))
 
@@ -111,6 +124,7 @@ def handle_message(event):
     try:
         user_id = event.source.user_id
         message_text = event.message.text.strip()
+        logging.info(f"[受信] user_id={user_id}, message='{message_text}'")
 
         if user_id in premium_state and message_text == "情報を登録する":
             del premium_state[user_id]
@@ -118,11 +132,13 @@ def handle_message(event):
             del user_status[user_id]
 
         if message_text == "プレミアム登録":
+            logging.info(f"[プレミアム登録開始] user_id={user_id}")
             reply = start_premium_setting(user_id)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             return
 
         if message_text == "情報を登録する":
+            logging.info(f"[登録開始] user_id={user_id}")
             reply = handle_registration_step(user_id, None)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             return
@@ -147,7 +163,6 @@ def handle_message(event):
             else:
                 line_bot_api.reply_message(event.reply_token, TextSendMessage("⚠️ この機能はプレミアムユーザー限定です。"))
             return
-
         if user_status.get(user_id, {}).get("mode") == "select_diary_type":
             diary_type = DIARY_TYPE_MAP.get(message_text)
             if diary_type:
@@ -185,6 +200,15 @@ def handle_message(event):
 
         approved_users = get_approved_users()
         user_info = get_user_info(user_id)
+        if not user_info or not user_info.get("name") or not user_info.get("tone"):
+             line_bot_api.reply_message(
+                 event.reply_token,
+                 TextSendMessage(
+                     text="📝 まだ情報登録が完了していないみたいです。\n「情報を登録する」と送って、先にユーザー登録をしてくださいね♪"
+                 )
+             )
+             return
+
         if not user_info:
             line_bot_api.reply_message(event.reply_token, TextSendMessage("ユーザー情報が見つかりません。『情報を登録する』と送ってね♪"))
             return

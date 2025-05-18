@@ -1,5 +1,4 @@
-import os
-import json
+import os 
 import gspread
 from google.oauth2.service_account import Credentials
 from google_sheets import save_user_info_to_sheet
@@ -45,12 +44,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/drive'
 ]
-
-# ✅ Secret File（Renderの/etc/secrets/credentials.json）から読み込む
 creds = Credentials.from_service_account_file('/etc/secrets/credentials.json', scopes=SCOPES)
 client = gspread.authorize(creds)
 
-# ✅ シート設定
 SHEET_NAME = "DiaryUserData"
 TAB_NAME = "UserInfoLog"
 
@@ -67,10 +63,9 @@ def handle_registration_step(user_id, message_text):
     step = registering_users[user_id]["step"]
     current_key = REGISTER_STEPS[step]
 
-    # 入力バリデーション（tone選択肢）
     if current_key == "tone":
         if message_text not in TONE_OPTIONS:
-            return "番号を1〜15の中から選んでね♪"
+            return "番号を1〜15の中から一つ選んでね♪"
         registering_users[user_id]["data"][current_key] = TONE_OPTIONS[message_text]
     else:
         registering_users[user_id]["data"][current_key] = message_text
@@ -81,35 +76,27 @@ def handle_registration_step(user_id, message_text):
         registering_users[user_id]["step"] = step
         return REGISTER_QUESTIONS[next_key]
     else:
-        # 全ステップ完了！保存処理
         user_data = registering_users[user_id]["data"]
 
-        # JSONにも保存
-        try:
-            with open("users_info.json", "r", encoding="utf-8") as f:
-                all_users = json.load(f)
-        except FileNotFoundError:
-            all_users = {}
-        all_users[user_id] = user_data
-        with open("users_info.json", "w", encoding="utf-8") as f:
-            json.dump(all_users, f, indent=2, ensure_ascii=False)
-
-        # ✅ スプレッドシートにも保存
         save_user_info_to_sheet(user_id, user_data)
-
-        # ✅ 登録後キャッシュ更新（これを追加）
         refresh_user_info_cache(user_id)
-
-        # 登録完了後、仮データ削除
         del registering_users[user_id]
-        return "🎉 登録が完了しました！日記リクエストを送ってみてください♪"
 
-# ✅ ユーザー情報取得（キャッシュあり版）
+        return (
+            "🎉 以下の情報で登録が完了しました！\n\n"
+            f"▶️ 名前：{user_data['name']}\n"
+            f"▶️ 年齢：{user_data['age_range']}\n"
+            f"▶️ キャラ：{user_data['tone']}\n\n"
+            "このままでよければ、日記リクエスト【出勤】【退勤】【お礼】のいずれかを送ってみてください♪\n"
+            "変更したい場合は、もう一度「情報を登録する」と送ってね😊"
+        )
+
+# ✅ ユーザー情報取得
+
 def get_user_info(user_id):
     if user_id in user_info_cache:
         return user_info_cache[user_id]
 
-    # シートから取得
     sheet = client.open(SHEET_NAME).worksheet(TAB_NAME)
     data = sheet.get_all_records()
 
@@ -124,12 +111,11 @@ def get_user_info(user_id):
             }
             user_info_cache[user_id] = user_info
             return user_info
-        
-        # ✅ キャッシュを強制的に更新する関数
+    return None
+
+# ✅ キャッシュを更新
+
 def refresh_user_info_cache(user_id):
     if user_id in user_info_cache:
         del user_info_cache[user_id]
     get_user_info(user_id)
-
-
-    return None
