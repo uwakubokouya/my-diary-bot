@@ -124,6 +124,16 @@ def handle_message(event):
     try:
         user_id = event.source.user_id
         message_text = event.message.text.strip()
+
+        # 登録の競合を防ぐためのチェック
+        if is_registering(user_id) and message_text == "プレミアム登録":
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ 情報登録が進行中です。完了後にプレミアム登録を行ってください。"))
+            return
+
+        if is_in_premium_setting(user_id) and message_text == "情報を登録する":
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text="⚠️ プレミアム登録が進行中です。完了後に情報登録を行ってください。"))
+            return
+
         logging.info(f"[受信] user_id={user_id}, message='{message_text}'")
 
         if user_id in premium_state and message_text == "情報を登録する":
