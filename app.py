@@ -89,7 +89,7 @@ def get_diary_type(text):
     elif "お礼" in text:
         return "orei"
     else:
-        return "diary"
+        return None
 
 @app.route("/callback", methods=["POST"])
 def callback():
@@ -243,13 +243,16 @@ def handle_message(event):
 
         diary_type = get_diary_type(message_text)
 
-        if user_id in approved_users:
+        diary_type = get_diary_type(message_text)
+
+        if diary_type and user_id in approved_users:
             pending_keyword_request[user_id] = diary_type
             line_bot_api.reply_message(
-                event.reply_token,
+               event.reply_token,
                 TextSendMessage("📝 入れて欲しいキーワードや内容があれば、読点（、）で区切って教えてください♪")
             )
             return
+
 
         usage_count = get_usage_count(user_id)
         if usage_count >= 3 and not is_test_user(user_id):
