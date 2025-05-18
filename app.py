@@ -132,7 +132,13 @@ def handle_message(event):
             del user_status[user_id]
 
         if message_text == "プレミアム登録":
-            logging.info(f"[プレミアム登録開始] user_id={user_id}")
+            user_info = get_user_info(user_id)
+            if user_info and user_info.get("is_premium") == True:
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text="✅ 現在プレミアム登録済みです。\n変更をご希望の場合は「変更希望」と送ってね😊")
+                )
+                return
             reply = start_premium_setting(user_id)
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
             return
