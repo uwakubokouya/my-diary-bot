@@ -87,6 +87,26 @@ def save_user_info_to_sheet(user_id, info):
     ])
 
 # ---------------------------
+# ②-2 プレミアムユーザー情報保存
+# ---------------------------
+def save_premium_user_info_to_sheet(user_id, premium_data):
+    sheet = connect_sheet("DiaryUserData", "PremiumUserInfo")
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    sheet.append_row([
+        user_id,
+        premium_data.get("emoji_list", ""),
+        premium_data.get("tone_tags", ""),
+        premium_data.get("ng_elements", ""),
+        premium_data.get("appeal_tags", ""),
+        premium_data.get("appeal_elements", ""),
+        premium_data.get("weekly_schedule", ""),
+        premium_data.get("fav_words", ""),
+        premium_data.get("other_requests", ""),
+        premium_data.get("store_name", ""),
+        now
+    ])
+
+# ---------------------------
 # ③ 使用回数ログ管理
 # ---------------------------
 def log_usage(user_id):
