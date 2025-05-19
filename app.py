@@ -243,8 +243,6 @@ def handle_message(event):
 
         diary_type = get_diary_type(message_text)
 
-        diary_type = get_diary_type(message_text)
-
         if diary_type and user_id in approved_users:
             pending_keyword_request[user_id] = diary_type
             line_bot_api.reply_message(
