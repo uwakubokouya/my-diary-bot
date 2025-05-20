@@ -112,6 +112,10 @@ def callback():
         abort(400)
     return "OK"
 
+@app.route("/", methods=["GET", "HEAD"])
+def health_check():
+    return "OK", 200
+
 @handler.add(FollowEvent)
 def handle_follow(event):
     user_id = event.source.user_id
